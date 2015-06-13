@@ -51,7 +51,6 @@ namespace YourTech.IO {
                 }
             }
         }
-        public abstract void Write(object value, string propertyName = null);
 
         protected abstract N OnBeginObject(N node, StonToken token);
         protected abstract N OnBeginArray(N node, StonToken token);

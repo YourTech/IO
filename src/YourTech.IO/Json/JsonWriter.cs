@@ -119,11 +119,6 @@ namespace YourTech.IO.Json {
         protected override void Initialize() {
             _node = new StonNode();
         }
-
-        public override void Write(object value, string propertyName = null) {
-            WritePropertyName(Node, propertyName);
-            WriteValue(value.AsString());
-        }
         protected override StonNode OnBeginObject(StonNode node, StonToken token) {
             WritePropertyName(node, token.PropertyName);
             WriteText("{").EndLine();

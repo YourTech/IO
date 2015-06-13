@@ -26,8 +26,6 @@ namespace YourTech.IO.Yron {
     }
 
     internal sealed class YrolistPropertyInfo : IYronPropertyInfo {
-        private string _headerName;
-        PropertyInfo _headerPInfo;
         private Action<object, string> _headerSetter;
         private Func<object, string> _headerGetter;
 

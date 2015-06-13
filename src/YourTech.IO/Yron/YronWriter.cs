@@ -74,10 +74,6 @@ namespace YourTech.IO.Yron {
             node.SetValue(token.Value, token.PropertyName);
         }
         protected override void OnEndBlock(YronNode node) { }
-
-        public override void Write(object value, string propertyName = null) {
-            (Node as YronNode)?.SetValue(value, propertyName);
-        }
     }
 
     public interface IYronType {

@@ -167,9 +167,6 @@ namespace YourTech.IO.Bon {
             WritePropertyName(node, token.PropertyName);
             WriteValue(token.Value);
         }
-        public override void Write(object value, string propertyName = null) {
-            WritePropertyName(Node, propertyName);
-        }
         protected override void OnEndBlock(StonNode node) {
             if (node.Count > 0) EndLine();
             if (node.TokenType == StonTokenTypes.BeginObject) {
