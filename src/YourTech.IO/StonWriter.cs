@@ -60,8 +60,18 @@ namespace YourTech.IO {
     }
 
     public class StonNode {
-        public int Count { get; internal set; }
-        public StonTokenTypes TokenType { get; internal set; }
+        public int Count {
+            get { return _count; }
+            internal set { _count = value; }
+        }
+        protected int _count;
+
+        public StonTokenTypes TokenType {
+            get { return _tokenType; }
+            internal set { _tokenType = value; }
+        }
+        protected StonTokenTypes _tokenType;
+
         public StonNode(StonTokenTypes type = StonTokenTypes.None) {
             TokenType = type;
             Count = 0;

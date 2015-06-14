@@ -12,6 +12,10 @@ namespace YourTech.IO.Yron {
         private Action<object, string> _headerSetter;
         private Func<object, string> _headerGetter;
 
+        public StonTokenTypes TokenType {
+            get { return StonTokenTypes.BeginObject; }
+        }
+
         public YrolistType(Type itemType, string headerPropertyName) {
             _itemType = itemType;
             PropertyInfo pInfo = _itemType?.GetProperty(headerPropertyName);
@@ -20,8 +24,33 @@ namespace YourTech.IO.Yron {
                 _headerGetter = (o) => { return pInfo.GetValue(o) as string; };
             }
         }
+
+        public void AddItem(IList list, object value) {
+            throw new NotImplementedException();
+        }
+
         public IYronPropertyInfo GetProperty(string propertyName) {
             return new YrolistPropertyInfo(propertyName, _itemType, _headerSetter, _headerGetter);
+        }
+
+        public int GetTokenCount(object This) {
+            return (This as IList).Count;
+        }
+
+        public object GetToken(object This, int index, out string propertyName) {
+            IList list = This as IList;
+            if (list == null || index < 0 || index >= list.Count) { propertyName = null; return null; }
+
+            object retVal = list[index];
+            propertyName = _headerGetter?.Invoke(retVal);
+            return retVal;
+        }
+
+        public void SetProperty(object This, string propertyName, object value) {
+            if (This is IList) {
+                if (value != null) _headerSetter?.Invoke(value, propertyName);
+                ((IList)This).Add(value);
+            }
         }
     }
 

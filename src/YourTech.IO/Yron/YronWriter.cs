@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Reflection;
+using System.Diagnostics;
 
 namespace YourTech.IO.Yron {
     public sealed class YronWriter : StonWriter<YronNode> {
@@ -44,25 +45,33 @@ namespace YourTech.IO.Yron {
         }
 
         protected override YronNode OnBeginObject(YronNode node, StonToken token) {
+            IYronPropertyInfo pInfo = node.TokenType == StonTokenTypes.BeginObject ? node.YronType.GetProperty(token.PropertyName) : null;
             Type objType = token.Value.AsType()
                 ?? (node.TokenType == StonTokenTypes.None ? ReturnValue?.GetType() ?? _objType
-                : node.TokenType == StonTokenTypes.BeginObject ? node.YronType.GetProperty(token.PropertyName)?.PropertyType
+                : node.TokenType == StonTokenTypes.BeginObject ? pInfo?.PropertyType
                 : node.TokenType == StonTokenTypes.BeginArray ? node.ItemType
                 : null);
 
-
-            object value = (node.TokenType == StonTokenTypes.None ? ReturnValue : null)
+            object value = (node.Object != null && pInfo != null && pInfo.GetOnly ? pInfo.GetValue(node.Object) : null)
+                ?? (node.TokenType == StonTokenTypes.None ? ReturnValue : null)
                 ?? (objType != null ? Activator.CreateInstance(objType) : null);
 
-            string typeName = null;
+            string typeName = objType.AsString();
             IYronType yronType = (node.TokenType == StonTokenTypes.None ? _yronType : null)
-                ?? (objType == null ? null : this[typeName = objType.AsString()]);
-            if (yronType == null) {
-                yronType = new YronType(objType);
+                ?? (objType == null ? null : this[typeName]);
+
+            if (yronType == null && objType != null) {
+                YronObjectAttribute att = objType.GetCustomAttribute<YronObjectAttribute>();
+
+                if (att == null) {
+                    if (Type.GetTypeCode(objType) == TypeCode.Object) yronType = YronListType.Instance;
+                } else if (att.YroType != null) yronType = (IYronType)Activator.CreateInstance(att.YroType);
+                else yronType = new YronObjectType(objType);
+
                 if (typeName != null) this[typeName] = yronType;
             }
 
-            YronNode retVal = node.CreateNode(value, yronType);
+            YronNode retVal = new YronNode(value, yronType);
             node.SetValue(value, token.PropertyName);
 
             return retVal;
@@ -77,7 +86,14 @@ namespace YourTech.IO.Yron {
     }
 
     public interface IYronType {
+        StonTokenTypes TokenType { get; }
+
+        int GetTokenCount(object This);
+        object GetToken(object This, int index, out string propertyName);
+
         IYronPropertyInfo GetProperty(string propertyName);
+        void SetProperty(object This, string propertyName, object value);
+        void AddItem(IList list, object value);
     }
     public interface IYronPropertyInfo {
         string PropertyName { get; }
@@ -97,63 +113,100 @@ namespace YourTech.IO.Yron {
 
         public YronNode() : base(StonTokenTypes.None) { }
         public YronNode(object obj, IYronType yronType) : base(StonTokenTypes.BeginObject) {
-            if ((List = (Object = obj) as IList) != null) ItemType = List.GetType().GetListGenericArgument();
             YronType = yronType;
-        }
-
-        //protected virtual IYronType GetYronType(YronWriter writer, object readerType, ref Type valueType) {
-        //    valueType = readerType.AsType() ?? valueType;
-        //    string text = valueType?.AsString();
-        //    IYronType retVal = writer[text];
-        //    if (retVal != null) return retVal;
-        //    if (valueType != null) retVal = OnCreateYronType(valueType);
-        //    if (!string.IsNullOrWhiteSpace(text)) writer[text] = retVal;
-        //    return retVal;
-        //}
-        //protected virtual IYronType OnCreateYronType(Type type) {
-        //    YronObjectAttribute att = type?.GetCustomAttribute<YronObjectAttribute>();
-        //    if (att == null) throw new StonException($"Missing YronObjectAttribute on Type {type.AsString()}");
-        //    return att.YronType != null ? (IYronType)Activator.CreateInstance(att.YronType) : new YronType(type, att);
-        //}
-
-        public Type GetValueType(StonToken token, ref object value) {
-            IYronPropertyInfo pInfo = TokenType == StonTokenTypes.BeginObject ? YronType?.GetProperty(token.PropertyName) : null;
-            if (pInfo != null && pInfo.GetOnly) value = pInfo.GetValue(Object);
-            return value?.GetType() ?? pInfo?.DefaultType ?? ItemType;
-        }
-        public YronNode CreateNode(object value, IYronType YronType) {
-            return new YronNode(value, YronType);
+            Object = obj;
+            if (yronType != null && (_tokenType = yronType.TokenType) == StonTokenTypes.BeginArray) {
+                if ((List = Object as IList) != null) ItemType = List.GetType().GetListGenericArgument();
+            }
         }
         public void SetValue(object value, string propertyName) {
             if (Object == null) return;
-            if (TokenType == StonTokenTypes.BeginObject) {
-                IYronPropertyInfo pInfo = YronType?.GetProperty(propertyName);
-                pInfo?.SetValue(Object, value.ConvertTo(pInfo.PropertyType));
+            else if (TokenType == StonTokenTypes.BeginObject) {
+                YronType?.SetProperty(Object, propertyName, value);
             } else if (TokenType == StonTokenTypes.BeginArray) {
-                if (List != null) List.Add(ItemType != null ? value.ConvertTo(ItemType) : value);
+                YronType?.AddItem(List, value);
             } else throw new StonException($"Invalid Node Type {TokenType}");
         }
     }
 
-    internal class YronType : IYronType {
-        SortedDictionary<string, YronPropertyInfo> _propertyDic;
-        public YronObjectAttribute YronAttribute { get; private set; }
+    internal class YronObjectType : IYronType {
+        List<Tuple<string, YronPropertyInfo>> _propertyDic;
+
+        public StonTokenTypes TokenType { get { return StonTokenTypes.BeginObject; } }
+
         public Type ObjectType { get; private set; }
 
-        public YronType(Type objectType, YronObjectAttribute att = null) {
-            _propertyDic = new SortedDictionary<string, YronPropertyInfo>();
-            YronAttribute = att ?? objectType?.GetCustomAttribute<YronObjectAttribute>();
+        public YronObjectType(Type objectType) {
+            _propertyDic = new List<Tuple<string, YronPropertyInfo>>();
             if ((ObjectType = objectType) != null) {
                 ObjectType.ScanYronProperties((a, p) => {
-                    _propertyDic[a.Name ?? p.Name] = new YronPropertyInfo(a, p);
+                    _propertyDic.Add(new Tuple<string, YronPropertyInfo>(a.Name ?? p.Name, new YronPropertyInfo(a, p)));
                 });
             }
+            _propertyDic.Sort<Tuple<string, YronPropertyInfo>>((a, b) => { return string.Compare(a.Item1, b.Item1); });
+        }
+
+
+        public int GetTokenCount(object This) {
+            return _propertyDic.Count;
+        }
+        public object GetToken(object This, int index, out string propertyName) {
+            if (index < 0 || index >= _propertyDic.Count) {
+                propertyName = null;
+                return null;
+            }
+            Tuple<string, YronPropertyInfo> pInfo = _propertyDic[index];
+            propertyName = pInfo.Item1;
+            return pInfo.Item2.GetValue(This);
         }
 
         public IYronPropertyInfo GetProperty(string propertyName) {
             if (string.IsNullOrEmpty(propertyName)) return null;
-            YronPropertyInfo retVal;
-            return _propertyDic.TryGetValue(propertyName, out retVal) ? retVal : null;
+            int index = _propertyDic.BinarySearch((a) => { return string.Compare(a.Item1, propertyName); });
+            return index < 0 ? null : _propertyDic[index].Item2;
+        }
+        public void SetProperty(object This, string propertyName, object value) {
+            if (This == null) return;
+            if (GetProperty(propertyName) == null) {
+                Debug.WriteLine(propertyName);
+            }
+            GetProperty(propertyName)?.SetValue(This, value);
+        }
+        public void AddItem(IList list, object value) {
+            throw new NotImplementedException();
+        }
+    }
+    internal class YronListType : IYronType {
+        static YronObjectAttribute _att = new YronObjectAttribute();
+        public static YronListType Instance { get { return _instance; } }
+        public static YronListType _instance = new YronListType();
+
+        public StonTokenTypes TokenType { get { return StonTokenTypes.BeginArray; } }
+        public YronObjectAttribute YronAttribute { get { return _att; } }
+
+        private YronListType() { }
+
+        public IYronPropertyInfo GetProperty(string propertyName) {
+            throw new NotImplementedException();
+        }
+
+        public object GetToken(object This, int index, out string propertyName) {
+            propertyName = null;
+            if (This == null) return null;
+            IList list = (IList)This;
+            if (index < 0 || index >= list.Count) return null;
+            return list[index];
+        }
+        public int GetTokenCount(object This) {
+            return (This as IList)?.Count ?? 0;
+        }
+
+        public void SetProperty(object This, string propertyName, object value) {
+            throw new NotImplementedException();
+        }
+
+        public void AddItem(IList list, object value) {
+            list?.Add(value);
         }
     }
     internal class YronPropertyInfo : IYronPropertyInfo {

@@ -11,23 +11,32 @@ using YourTech.IO.Json;
 
 namespace YourTech {
     [TestClass]
-    public class JsonTest {
+    public class BonTest {
         private static string _asmLocation;
-        static JsonTest() {
+        static BonTest() {
             _asmLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         }
 
         [TestMethod]
-        public void IndentJsonTest() {
+        public void BonJsonConvertTest() {
             string srcPath = Path.Combine(_asmLocation, "AllCards.json");
-            string destPath = Path.Combine(_asmLocation, "IndentJsonTest.json");
+            string indentJsonTestPath = Path.Combine(_asmLocation, "IndentJsonTest.json");
+            string bonPath = Path.Combine(_asmLocation, "BonTest.bon");
+            string bonJsonPath = Path.Combine(_asmLocation, "BonTest.json");
+            if (!File.Exists(indentJsonTestPath)) new JsonTest().IndentJsonTest();
 
             try {
-                using (JsonWriter writer = new JsonWriter(new StreamWriter(destPath), true, true)) {
+                using (BonWriter writer = new BonWriter(File.OpenWrite(bonPath), true)) {
                     using (JsonReader reader = new JsonReader(new StreamReader(File.OpenRead(srcPath)), true)) {
                         writer.Write(reader);
                     }
                 }
+                using (JsonWriter writer = new JsonWriter(new StreamWriter(bonJsonPath), true, true)) {
+                    using (BonReader reader = new BonReader(File.OpenRead(bonPath), true)) {
+                        writer.Write(reader);
+                    }
+                }
+                FileAssert.AreEqual(indentJsonTestPath, bonJsonPath);
             } catch (Exception ex) {
                 Assert.Fail(ex.ToString());
             }

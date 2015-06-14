@@ -12,20 +12,8 @@ using YourTech.IO;
 
 namespace YourTech {
     static partial class Yrextension {
-        public static Type AsType(this object value) {
-            if (value == null) return null;
-            if (value is Type) return (Type)value;
-            string name = value.ToType<string>();
-            if (string.IsNullOrWhiteSpace(name)) return null;
-            try { return Type.GetType(name); } catch { return null; }
-        }
-        public static string AsString(this object value) {
-            if (value == null) return null;
-            if (value is Type) {
-                Type type = (Type)value;
-                return $"{type.FullName}, {type.Assembly.GetName().Name}";
-            } else return value.ToType<string>();
-        }
+
+        #region :: Converter ::
         public static object ConvertTo(this object value, Type type, object defaultValue = null, bool allowConvertToString = false) {
             if (value != null && !(value is DBNull) && type != null) {
                 Type valueType = value.GetType();
@@ -49,5 +37,46 @@ namespace YourTech {
             return (T)ConvertTo(value, typeof(T), defaultValue, allowConvertToString);
         }
 
+        public static Type AsType(this object value) {
+            if (value == null) return null;
+            if (value is Type) return (Type)value;
+            string name = value.ToType<string>();
+            if (string.IsNullOrWhiteSpace(name)) return null;
+            try { return Type.GetType(name); } catch { return null; }
+        }
+        public static string AsString(this object value) {
+            if (value == null) return null;
+            if (value is Type) {
+                Type type = (Type)value;
+                return $"{type.FullName}, {type.Assembly.GetName().Name}";
+            } else return value.ToType<string>();
+        }
+        #endregion
+
+        #region :: Collection ::
+        public static int BinarySearch<T>(this IList<T> list, Func<T, int> comparison, int index = 0, int lenght = -1) {
+            int low = index;
+            int hi = (lenght < 0 ? list.Count : low + lenght) - 1;
+            if (low < 0 || hi >= list.Count) throw new IndexOutOfRangeException();
+            int mid = 0;
+            while (low <= hi) {
+                mid = low + ((hi - low) >> 1);
+                int comp = comparison(list[mid]);
+                if (comp == 0) return mid;
+                else if (comp > 0) hi = mid - 1;
+                else low = mid + 1;
+            }
+            return ~low;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T Search<T>(this IList<T> list, Func<T, int> comparison, int index = 0, int lenght = -1) {
+            int i = list.BinarySearch<T>(comparison, index, lenght);
+            return i < 0 ? default(T) : (T)list[i];
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Sort<T>(this IList<T> list, Comparison<T> comparison) {
+            ArrayList.Adapter((IList)list).Sort(Comparer<T>.Create(comparison));
+        }
+        #endregion
     }
 }

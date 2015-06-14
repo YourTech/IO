@@ -34,7 +34,7 @@ namespace YourTech.IO {
             if (!CanRead) return false;
 
             StonTokenTypes type = _token?.TokenType ?? StonTokenTypes.None;
-            if (type == StonTokenTypes.BeginObject || type == StonTokenTypes.BeginArray) {
+            if ((type & StonTokenTypes.BeginBlock) != StonTokenTypes.None) {
                 _tokenStack.Push(_blockToken = _token);
             } else if ((type == StonTokenTypes.EndBlock) && _tokenStack.Count > 0) {
                 _tokenStack.Pop();
@@ -80,9 +80,24 @@ namespace YourTech.IO {
     }
     public class StonToken {
         public int Count { get; internal set; }
-        public StonTokenTypes TokenType { get; set; }
-        public object Value { get; set; }
-        public string PropertyName { get; set; }
+
+        public StonTokenTypes TokenType {
+            get { return _tokenType; }
+            internal set { _tokenType = value; }
+        }
+        protected StonTokenTypes _tokenType;
+
+        public object Value {
+            get { return _value; }
+            internal set { _value = value; }
+        }
+        protected object _value;
+
+        public string PropertyName {
+            get { return _propertyName; }
+            internal set { _propertyName = value; }
+        }
+        protected string _propertyName;
 
         public StonToken(StonTokenTypes tokenType = StonTokenTypes.None, object value = null) {
             Count = 0;
@@ -99,6 +114,7 @@ namespace YourTech.IO {
         EndBlock = (1 << 2),
         Value = (1 << 4),
 
+        BeginBlock = BeginObject | BeginArray,
         Name = BeginObject | BeginArray | Value,
     }
 }

@@ -57,6 +57,7 @@
     <Compile Include="Yron\Yrodic.cs" />
     <Compile Include="Yron\YroList.cs" />
     <Compile Include="Yron\YronAttributes.cs" />
+    <Compile Include="Yron\YronReader.cs" />
     <Compile Include="Yron\YronWriter.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

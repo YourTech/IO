@@ -50,9 +50,11 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="BonTest.cs" />
     <Compile Include="FileAssert.cs" />
     <Compile Include="JsonTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="YronTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\YourTech.IO\YourTech.IO.csproj">
