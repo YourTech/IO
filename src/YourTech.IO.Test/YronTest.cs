@@ -49,6 +49,8 @@ namespace YourTech {
         public string layout { get; set; }
         [YronProperty]
         public string name { get; set; }
+        [YronProperty(GetOnly = true)]
+        public List<string> names { get; set; }
         [YronProperty]
         public string manaCost { get; set; }
         [YronProperty]
@@ -58,35 +60,57 @@ namespace YourTech {
         [YronProperty]
         public string type { get; set; }
         [YronProperty(GetOnly = true)]
+        public List<string> supertypes { get; set; }
+        [YronProperty(GetOnly = true)]
         public List<string> types { get; set; }
         [YronProperty(GetOnly = true)]
         public List<string> subtypes { get; set; }
         [YronProperty]
+        public string rarity { get; set; }
+        [YronProperty]
         public string text { get; set; }
         [YronProperty]
-        public string imageName { get; set; }
+        public string flavor { get; set; }
+        [YronProperty]
+        public string artist { get; set; }
+        [YronProperty]
+        public string number { get; set; }
         [YronProperty]
         public string power { get; set; }
         [YronProperty]
         public string toughness { get; set; }
+        [YronProperty]
+        public int loyalty { get; set; }
+        [YronProperty]
+        public int multiverseid { get; set; }
         [YronProperty(GetOnly = true)]
-        public List<string> supertypes { get; set; }
+        public List<int> variations { get; set; }
         [YronProperty]
-        public string starter { get; set; }
+        public string imageName { get; set; }
         [YronProperty]
-        public string loyalty { get; set; }
+        public string watermark { get; set; }
         [YronProperty]
-        public string hand { get; set; }
+        public string border { get; set; }
         [YronProperty]
-        public string life { get; set; }
+        public bool timeshifted { get; set; }
         [YronProperty]
-        public List<string> names { get; set; }
+        public int hand { get; set; }
+        [YronProperty]
+        public int life { get; set; }
+        [YronProperty]
+        public bool reserved { get; set; }
+        [YronProperty]
+        public string releaseDate { get; set; }
+        [YronProperty]
+        public bool starter { get; set; }
+
         public Card() {
             colors = new List<string>();
             types = new List<string>();
             subtypes = new List<string>();
             supertypes = new List<string>();
             names = new List<string>();
+            variations = new List<int>();
         }
     }
 }

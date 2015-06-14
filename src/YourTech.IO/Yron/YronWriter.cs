@@ -229,7 +229,7 @@ namespace YourTech.IO.Yron {
             return _pInfo?.GetValue(obj);
         }
         public void SetValue(object obj, object value) {
-            _pInfo?.SetValue(obj, value);
+            _pInfo?.SetValue(obj, value.ConvertTo(_pInfo.PropertyType));
         }
     }
 }
